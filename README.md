@@ -14,6 +14,7 @@ Passive Agent is a flexible tool for building complex contexts by processing ins
 - 📊 Token usage tracking and reporting
 - 🎯 Simple instruction-based workflow
 - 🎭 Custom system prompts via SYSTEM.md
+- 🔀 Dynamic model switching with /model instruction
 
 ## Installation
 

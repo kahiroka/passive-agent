@@ -48,9 +48,28 @@ In `INSTRUCT.md`, you can use:
 - `@filename.md` - Include file content inline
 - `@directory/` - Include all files from directory with XML-style tags
 - `/completion` - Perform AI completion on current context
+- `/model MODEL_NAME` - Set the model for subsequent completions
 - Empty lines are ignored
 
 You can use multiple `/completion` instructions to perform sequential completions, with each completion result added to the context for the next one.
+
+### Model Override
+
+The `/model` instruction allows you to change the model for subsequent completions:
+
+```
+@context.md
+/model gpt-3.5-turbo
+/completion
+@more_context.md
+/model gpt-4
+/completion
+```
+
+This is useful when you want to:
+- Use a faster/cheaper model for initial drafts
+- Switch to a more capable model for complex tasks
+- Test the same prompt with different models
 
 ## Custom System Prompt
 

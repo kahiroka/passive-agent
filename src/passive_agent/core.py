@@ -6,6 +6,7 @@ This script reads instructions from INSTRUCT.md and executes them:
 - @FILE_NAME: Adds file content inline to context
 - @DIRECTORY_NAME: Adds directory files with <file name="...">content</file> tags
 - /completion: Performs OpenAI API completion
+- /model MODEL_NAME: Sets the model for subsequent completions
 - Writes intermediate context to CONTEXT.md
 - Writes final completion to COMPLETION.json and COMPLETION.md
 
@@ -68,6 +69,7 @@ def process_instructions(instructions: List[str]) -> tuple[str, List[Dict[str, i
     context_parts = []
     completion_count = 0
     token_stats = []
+    override_model = None  # Track model override from /model instruction
     
     for instruction in instructions:
         instruction = instruction.strip()
@@ -99,17 +101,22 @@ def process_instructions(instructions: List[str]) -> tuple[str, List[Dict[str, i
             # Perform completion and add to context
             current_context = '\n'.join(context_parts)
             completion_count += 1
-            completion_content, tokens = perform_completion(current_context, completion_count)
+            completion_content, tokens = perform_completion(current_context, completion_count, override_model)
             if completion_content:
                 context_parts.append(completion_content)
                 print(f"Performed completion #{completion_count} and added to context")
             if tokens:
                 token_stats.append(tokens)
+        
+        elif instruction.startswith('/model '):
+            # Set model override for subsequent completions
+            override_model = instruction[7:].strip()
+            print(f"Model override set to: {override_model}")
     
     return '\n'.join(context_parts), token_stats
 
 
-def perform_completion(context: str, completion_num: int = 1) -> tuple[str, Dict[str, int]]:
+def perform_completion(context: str, completion_num: int = 1, override_model: str = None) -> tuple[str, Dict[str, int]]:
     """Perform OpenAI API completion or return mock response. Returns (content, token_stats)."""
     # Check for system prompt from SYSTEM.md
     system_prompt = "You are a helpful assistant providing advice."
@@ -137,8 +144,11 @@ def perform_completion(context: str, completion_num: int = 1) -> tuple[str, Dict
                     api_key=openrouter_api_key,
                     base_url=openrouter_base_url
                 )
-                model = os.getenv('OPENROUTER_MODEL', 'google/gemini-2.0-flash-exp:free')
-                print(f"Using OpenRouter with model: {model}")
+                model = override_model or os.getenv('OPENROUTER_MODEL', 'google/gemini-2.0-flash-exp:free')
+                if override_model:
+                    print(f"Using OpenRouter with overridden model: {model}")
+                else:
+                    print(f"Using OpenRouter with model: {model}")
             else:
                 # Use standard OpenAI
                 openai_base_url = os.getenv('OPENAI_BASE_URL')
@@ -149,8 +159,11 @@ def perform_completion(context: str, completion_num: int = 1) -> tuple[str, Dict
                     )
                 else:
                     client = openai.OpenAI(api_key=openai_api_key)
-                model = os.getenv('OPENAI_MODEL', 'gpt-4')
-                print(f"Using OpenAI with model: {model}")
+                model = override_model or os.getenv('OPENAI_MODEL', 'gpt-4')
+                if override_model:
+                    print(f"Using OpenAI with overridden model: {model}")
+                else:
+                    print(f"Using OpenAI with model: {model}")
             
             response = client.chat.completions.create(
                 model=model,
