@@ -13,6 +13,7 @@ Passive Agent is a flexible tool for building complex contexts by processing ins
 - 🔄 Sequential processing with context accumulation
 - 📊 Token usage tracking and reporting
 - 🎯 Simple instruction-based workflow
+- 🎭 Custom system prompts via SYSTEM.md
 
 ## Installation
 
@@ -61,6 +62,8 @@ passive-agent
 ### OpenAI
 ```bash
 export OPENAI_API_KEY="your-key"
+export OPENAI_MODEL="gpt-4"  # Optional, default is gpt-4
+export OPENAI_BASE_URL="https://api.openai.com/v1"  # Optional, for custom endpoints
 passive-agent
 ```
 

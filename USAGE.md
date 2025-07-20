@@ -20,6 +20,8 @@ pip install -r requirements.txt
 ### Using OpenAI API
 ```bash
 export OPENAI_API_KEY="your-openai-api-key"
+export OPENAI_BASE_URL="https://api.openai.com/v1"  # Optional, for custom endpoints
+export OPENAI_MODEL="gpt-4"  # Optional, default is gpt-4
 python3 process_instructions.py
 ```
 
@@ -49,6 +51,17 @@ In `INSTRUCT.md`, you can use:
 - Empty lines are ignored
 
 You can use multiple `/completion` instructions to perform sequential completions, with each completion result added to the context for the next one.
+
+## Custom System Prompt
+
+You can customize the AI's system prompt by creating a `SYSTEM.md` file in the same directory as `INSTRUCT.md`. This allows you to define the AI's behavior, role, or specific instructions.
+
+Example `SYSTEM.md`:
+```
+You are an expert Python developer. Provide concise, idiomatic Python code with clear explanations. Focus on best practices and performance.
+```
+
+If no `SYSTEM.md` file exists, the default system prompt is: "You are a helpful assistant providing advice."
 
 ## Example INSTRUCT.md
 

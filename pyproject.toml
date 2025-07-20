@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "passive-agent-kahiroka"
-version = "0.1.1"
+version = "0.2.0"
 description = "A passive agent for prompt engineering experiments with instruction-based context building"
 readme = "README.md"
 requires-python = ">=3.8"

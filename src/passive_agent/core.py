@@ -9,8 +9,11 @@ This script reads instructions from INSTRUCT.md and executes them:
 - Writes intermediate context to CONTEXT.md
 - Writes final completion to COMPLETION.json and COMPLETION.md
 
+If SYSTEM.md exists in the working directory, its content will be used as the system prompt
+for AI completions. Otherwise, a default prompt is used.
+
 Supports both OpenAI and OpenRouter APIs:
-- OpenAI: Set OPENAI_API_KEY environment variable
+- OpenAI: Set OPENAI_API_KEY and optionally OPENAI_BASE_URL and OPENAI_MODEL
 - OpenRouter: Set OPENROUTER_API_KEY and optionally OPENROUTER_BASE_URL and OPENROUTER_MODEL
 """
 
@@ -108,6 +111,17 @@ def process_instructions(instructions: List[str]) -> tuple[str, List[Dict[str, i
 
 def perform_completion(context: str, completion_num: int = 1) -> tuple[str, Dict[str, int]]:
     """Perform OpenAI API completion or return mock response. Returns (content, token_stats)."""
+    # Check for system prompt from SYSTEM.md
+    system_prompt = "You are a helpful assistant providing advice."
+    system_path = Path('SYSTEM.md')
+    if system_path.exists():
+        try:
+            with open(system_path, 'r', encoding='utf-8') as f:
+                system_prompt = f.read().strip()
+                print(f"  Using custom system prompt from SYSTEM.md")
+        except Exception as e:
+            print(f"  Warning: Could not read SYSTEM.md: {e}")
+    
     # Check for OpenRouter configuration
     openrouter_api_key = os.getenv('OPENROUTER_API_KEY')
     openrouter_base_url = os.getenv('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1')
@@ -123,18 +137,25 @@ def perform_completion(context: str, completion_num: int = 1) -> tuple[str, Dict
                     api_key=openrouter_api_key,
                     base_url=openrouter_base_url
                 )
-                model = os.getenv('OPENROUTER_MODEL', 'openai/gpt-4')
+                model = os.getenv('OPENROUTER_MODEL', 'google/gemini-2.0-flash-exp:free')
                 print(f"Using OpenRouter with model: {model}")
             else:
                 # Use standard OpenAI
-                client = openai.OpenAI(api_key=openai_api_key)
-                model = "gpt-4"
+                openai_base_url = os.getenv('OPENAI_BASE_URL')
+                if openai_base_url:
+                    client = openai.OpenAI(
+                        api_key=openai_api_key,
+                        base_url=openai_base_url
+                    )
+                else:
+                    client = openai.OpenAI(api_key=openai_api_key)
+                model = os.getenv('OPENAI_MODEL', 'gpt-4')
                 print(f"Using OpenAI with model: {model}")
             
             response = client.chat.completions.create(
                 model=model,
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant analyzing climate patterns and providing advice."},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": context}
                 ],
                 temperature=0.7,
@@ -196,7 +217,7 @@ def perform_completion(context: str, completion_num: int = 1) -> tuple[str, Dict
         "choices": [{
             "message": {
                 "role": "assistant",
-                "content": "Based on the observed patterns of hotter temperatures and less rainfall compared to last year, next year may continue this warming and drying trend due to climate change. For this year, you should consider: 1) Conserving water through efficient irrigation and rainwater harvesting, 2) Planting drought-resistant crops or native plants, 3) Improving shade and cooling systems for homes and livestock, 4) Planning for potential water shortages, and 5) Supporting climate adaptation measures in your community. These actions will help you prepare for increasingly hot and dry conditions."
+                "content": "Hi there. This is a mock response."
             },
             "finish_reason": "stop",
             "index": 0
@@ -245,10 +266,13 @@ def main():
     if os.getenv('OPENROUTER_API_KEY'):
         print("API: OpenRouter")
         print(f"Base URL: {os.getenv('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1')}")
-        print(f"Model: {os.getenv('OPENROUTER_MODEL', 'openai/gpt-4')}")
+        print(f"Model: {os.getenv('OPENROUTER_MODEL', 'google/gemini-2.0-flash-exp:free')}")
     elif os.getenv('OPENAI_API_KEY'):
         print("API: OpenAI")
-        print("Model: gpt-4")
+        openai_base_url = os.getenv('OPENAI_BASE_URL')
+        if openai_base_url:
+            print(f"Base URL: {openai_base_url}")
+        print(f"Model: {os.getenv('OPENAI_MODEL', 'gpt-4')}")
     else:
         print("API: None (will use mock response)")
     print("=" * 20 + "\n")
