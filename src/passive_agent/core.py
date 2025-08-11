@@ -6,7 +6,7 @@ This script reads instructions from INSTRUCT.md and executes them:
 - @FILE_NAME: Adds file content inline to context
 - @DIRECTORY_NAME: Adds directory files with <file name="...">content</file> tags
 - /completion: Performs OpenAI API completion
-- /model MODEL_NAME: Sets the model for subsequent completions
+- /model MODEL_NAME MAX_TOKENS: Sets the model and max_tokens for subsequent completions
 - Writes intermediate context to CONTEXT.md
 - Writes final completion to COMPLETION.json and COMPLETION.md
 
@@ -70,6 +70,7 @@ def process_instructions(instructions: List[str]) -> tuple[str, List[Dict[str, i
     completion_count = 0
     token_stats = []
     override_model = None  # Track model override from /model instruction
+    override_max_tokens = None  # Track max_tokens override from /model instruction
     
     for instruction in instructions:
         instruction = instruction.strip()
@@ -101,7 +102,7 @@ def process_instructions(instructions: List[str]) -> tuple[str, List[Dict[str, i
             # Perform completion and add to context
             current_context = '\n'.join(context_parts)
             completion_count += 1
-            completion_content, tokens = perform_completion(current_context, completion_count, override_model)
+            completion_content, tokens = perform_completion(current_context, completion_count, override_model, override_max_tokens)
             if completion_content:
                 context_parts.append(completion_content)
                 print(f"Performed completion #{completion_count} and added to context")
@@ -109,14 +110,24 @@ def process_instructions(instructions: List[str]) -> tuple[str, List[Dict[str, i
                 token_stats.append(tokens)
         
         elif instruction.startswith('/model '):
-            # Set model override for subsequent completions
-            override_model = instruction[7:].strip()
-            print(f"Model override set to: {override_model}")
+            # Set model and max_tokens override for subsequent completions
+            parts = instruction[7:].strip().split()
+            if len(parts) >= 1:
+                override_model = parts[0]
+                print(f"Model override set to: {override_model}")
+            if len(parts) >= 2:
+                try:
+                    override_max_tokens = int(parts[1])
+                    print(f"Max tokens override set to: {override_max_tokens}")
+                except ValueError:
+                    print(f"Warning: Invalid max_tokens value '{parts[1]}', ignoring")
+            if len(parts) > 2:
+                print(f"Warning: Extra parameters ignored: {' '.join(parts[2:])}")
     
     return '\n'.join(context_parts), token_stats
 
 
-def perform_completion(context: str, completion_num: int = 1, override_model: str = None) -> tuple[str, Dict[str, int]]:
+def perform_completion(context: str, completion_num: int = 1, override_model: str = None, override_max_tokens: int = None) -> tuple[str, Dict[str, int]]:
     """Perform OpenAI API completion or return mock response. Returns (content, token_stats)."""
     # Check for system prompt from SYSTEM.md
     system_prompt = "You are a helpful assistant providing advice."
@@ -165,6 +176,11 @@ def perform_completion(context: str, completion_num: int = 1, override_model: st
                 else:
                     print(f"Using OpenAI with model: {model}")
             
+            max_tokens = override_max_tokens or 4096
+            if override_max_tokens:
+                print(f"  Using overridden max_tokens: {max_tokens}")
+            else:
+                print(f"  Using default max_tokens: {max_tokens}")
             response = client.chat.completions.create(
                 model=model,
                 messages=[
@@ -172,7 +188,7 @@ def perform_completion(context: str, completion_num: int = 1, override_model: st
                     {"role": "user", "content": context}
                 ],
                 temperature=0.7,
-                max_tokens=200
+                max_tokens=max_tokens
             )
             
             # Save raw response
